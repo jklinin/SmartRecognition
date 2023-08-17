@@ -18,7 +18,6 @@ import java.io.File;
 import java.io.IOException;
 
 public class JavaSoundAPIRecorder implements AudioRecorder {
-    private static final long RECORDING_DURATION_MILLIS = 10_000;  // 10 seconds
     private AudioSystemService audioSystemService;
     private MixerService mixerService;
 
@@ -28,7 +27,7 @@ public class JavaSoundAPIRecorder implements AudioRecorder {
     }
 
     @Override
-    public void recordAndSave(String filePath) throws SoundRecordingException {
+    public void recordAndSave(String filePath, long recording_duration) throws SoundRecordingException {
 
         Mixer.Info desiredMixerInfo = audioSystemService.getMixerInfo();
         if (desiredMixerInfo == null) {
@@ -52,7 +51,7 @@ public class JavaSoundAPIRecorder implements AudioRecorder {
 
             byte[] buffer = new byte[chosenFormat.getSampleSizeInBits() * 1024];
             int bytesRead;
-            long endTimeMillis = System.currentTimeMillis() + RECORDING_DURATION_MILLIS;
+            long endTimeMillis = System.currentTimeMillis() + recording_duration;
 
             while (System.currentTimeMillis() < endTimeMillis) {
                 bytesRead = targetDataLine.read(buffer, 0, buffer.length);
