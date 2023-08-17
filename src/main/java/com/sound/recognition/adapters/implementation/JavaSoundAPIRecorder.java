@@ -4,68 +4,66 @@ import com.sound.recognition.adapters.AudioRecorder;
 import com.sound.recognition.exceptions.SoundRecordingException;
 
 import javax.sound.sampled.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 
 public class JavaSoundAPIRecorder implements AudioRecorder {
 
     public static final String SOUND_DEVICE_NAME = "USB Audio Device";
+    private static final long RECORDING_DURATION_MILLIS = 10_000;  // 10 seconds
+
 
     @Override
     public void recordAndSave(String filePath) throws SoundRecordingException {
 
         Mixer.Info desiredMixerInfo = getDesiredMixerInfo();
         if (desiredMixerInfo == null) {
-            throw new SoundRecordingException("Device not founded");
+            throw new SoundRecordingException("Device not found");
         }
 
         Mixer mixer = AudioSystem.getMixer(desiredMixerInfo);
-
         AudioFormat chosenFormat = getSupportedFormat(mixer);
         if (chosenFormat == null) {
-            throw new SoundRecordingException("No formats founded");
+            throw new SoundRecordingException("No supported formats found");
         }
 
         DataLine.Info newDataLineInfo = new DataLine.Info(TargetDataLine.class, chosenFormat);
-        TargetDataLine targetDataLine;
-        try {
-            targetDataLine = (TargetDataLine) mixer.getLine(newDataLineInfo);
+
+        try (
+                TargetDataLine targetDataLine = (TargetDataLine) mixer.getLine(newDataLineInfo);
+                ByteArrayOutputStream outStream = new ByteArrayOutputStream()
+        ) {
             targetDataLine.open(chosenFormat);
-        } catch (LineUnavailableException e) {
-            throw new SoundRecordingException("Line is unavailable.");
-        }
+            System.out.println("Start recording...");
+            targetDataLine.start();
 
-        System.out.println("Start recording...");
-        targetDataLine.start();
+            byte[] buffer = new byte[chosenFormat.getSampleSizeInBits() * 1024];
+            int bytesRead;
+            long endTimeMillis = System.currentTimeMillis() + RECORDING_DURATION_MILLIS;
 
-        Thread stopper = new Thread(() -> {
-            try (AudioInputStream audioStream = new AudioInputStream(targetDataLine)) {
+            while (System.currentTimeMillis() < endTimeMillis) {
+                bytesRead = targetDataLine.read(buffer, 0, buffer.length);
+                outStream.write(buffer, 0, bytesRead);
+            }
+
+            byte[] audioBytes = outStream.toByteArray();
+            try (ByteArrayInputStream inStream = new ByteArrayInputStream(audioBytes);
+                 AudioInputStream audioStream = new AudioInputStream(inStream, chosenFormat, audioBytes.length / chosenFormat.getFrameSize())) {
                 File audioFile = new File(filePath);
                 AudioSystem.write(audioStream, AudioFileFormat.Type.WAVE, audioFile);
-            } catch (IOException e) {
-                e.printStackTrace();
             }
-        });
 
-        stopper.start();
+            System.out.println("Recording stopped. File saved as " + filePath);
 
-        try {
-            Thread.sleep(10000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        } catch (LineUnavailableException e) {
+            throw new SoundRecordingException("Line is unavailable.", e);
+        } catch (IOException e) {
+            throw new SoundRecordingException("Error saving the audio file.", e);
         }
-
-        targetDataLine.stop();
-
-        try {
-            stopper.join();  // TODO Ensure the saving process completes before closing the line.
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        targetDataLine.close();
-        System.out.println("Recording stopped. File saved as " + filePath);
     }
+
 
     private Mixer.Info getDesiredMixerInfo() {
         Mixer.Info[] mixerInfos = AudioSystem.getMixerInfo();
