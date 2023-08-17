@@ -1,6 +1,6 @@
 package com.sound.recognition.repository.recording.implementation;
 
-import com.sound.recognition.entities.tensorflow.observer.Observer;
+import com.sound.recognition.entities.tensorflow.observer.SoundRecordingObserver;
 import com.sound.recognition.exceptions.SoundSaveException;
 import com.sound.recognition.services.AudioSystemService;
 import com.sound.recognition.services.MixerService;
@@ -20,14 +20,14 @@ class SoundFileRepositoryImplementationTest {
     private SoundFileRepositoryImplementation repository;
     private MixerService mixerService;
     private AudioSystemService audioSystemService;
-    private Observer observer;
+    private SoundRecordingObserver soundRecordingObserver;
 
     @BeforeEach
     void setUp() {
         mixerService = mock(MixerService.class);
         audioSystemService = mock(AudioSystemService.class);
         repository = new SoundFileRepositoryImplementation(mixerService, audioSystemService);
-        observer = mock(Observer.class);
+        soundRecordingObserver = mock(SoundRecordingObserver.class);
     }
 
     @Test
@@ -47,35 +47,35 @@ class SoundFileRepositoryImplementationTest {
 
     @Test
     void testObserver() {
-        repository.addObserver(observer);
+        repository.addObserver(soundRecordingObserver);
         repository.notifyObservers();
 
-        verify(observer, times(1)).update(null);
+        verify(soundRecordingObserver, times(1)).update(null);
     }
 
     // ... (previous imports and setup)
 
     @Test
     void testObserverRemoval() {
-        repository.addObserver(observer);
-        repository.removeObserver(observer);
+        repository.addObserver(soundRecordingObserver);
+        repository.removeObserver(soundRecordingObserver);
         repository.notifyObservers();
 
-        // Observer should not be notified after removal
-        verify(observer, never()).update(null);
+        // SoundRecordingObserver should not be notified after removal
+        verify(soundRecordingObserver, never()).update(null);
     }
 
     @Test
     void testMultipleObservers() {
-        Observer secondObserver = mock(Observer.class);
+        SoundRecordingObserver secondSoundRecordingObserver = mock(SoundRecordingObserver.class);
 
-        repository.addObserver(observer);
-        repository.addObserver(secondObserver);
+        repository.addObserver(soundRecordingObserver);
+        repository.addObserver(secondSoundRecordingObserver);
         repository.notifyObservers();
 
         // Both observers should be notified
-        verify(observer, times(1)).update(null);
-        verify(secondObserver, times(1)).update(null);
+        verify(soundRecordingObserver, times(1)).update(null);
+        verify(secondSoundRecordingObserver, times(1)).update(null);
     }
 
     @Test

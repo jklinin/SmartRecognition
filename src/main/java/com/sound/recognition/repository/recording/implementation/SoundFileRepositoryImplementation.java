@@ -1,6 +1,6 @@
 package com.sound.recognition.repository.recording.implementation;
 
-import com.sound.recognition.entities.tensorflow.observer.Observer;
+import com.sound.recognition.entities.tensorflow.observer.SoundRecordingObserver;
 import com.sound.recognition.exceptions.SoundSaveException;
 import com.sound.recognition.repository.recording.SoundFileRepository;
 import com.sound.recognition.services.AudioSystemService;
@@ -20,7 +20,7 @@ public class SoundFileRepositoryImplementation implements SoundFileRepository {
 
     private final AudioFormat chosenFormat;
     private final AudioSystemService audioSystemService;
-    private List<Observer> observers = new ArrayList<>();
+    private List<SoundRecordingObserver> soundRecordingObservers = new ArrayList<>();
 
     public SoundFileRepositoryImplementation(MixerService mixerService, AudioSystemService audioSystemService) {
 
@@ -48,18 +48,18 @@ public class SoundFileRepositoryImplementation implements SoundFileRepository {
 
 
     @Override
-    public void addObserver(Observer o) {
-        observers.add(o);
+    public void addObserver(SoundRecordingObserver o) {
+        soundRecordingObservers.add(o);
     }
 
     @Override
-    public void removeObserver(Observer o) {
-        observers.remove(o);
+    public void removeObserver(SoundRecordingObserver o) {
+        soundRecordingObservers.remove(o);
     }
 
     @Override
     public void notifyObservers() {
-        for (Observer o : observers) {
+        for (SoundRecordingObserver o : soundRecordingObservers) {
             o.update(null);
         }
     }

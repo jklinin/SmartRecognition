@@ -1,16 +1,16 @@
 package com.sound.recognition.repository.recording;
 
-import com.sound.recognition.entities.tensorflow.observer.Observer;
-import com.sound.recognition.entities.tensorflow.observer.Subject;
+import com.sound.recognition.entities.tensorflow.observer.SoundRecordingObserver;
+import com.sound.recognition.entities.tensorflow.observer.SoundRecordingSubject;
 import com.sound.recognition.exceptions.SoundSaveException;
 
-public interface SoundFileRepository extends Subject {
+public interface SoundFileRepository extends SoundRecordingSubject {
     void save(byte[] audioData) throws SoundSaveException;
 
 
-    void addObserver(Observer o);
+    void addObserver(SoundRecordingObserver o);
 
-    void removeObserver(Observer o);
+    void removeObserver(SoundRecordingObserver o);
 
     void notifyObservers();
 }

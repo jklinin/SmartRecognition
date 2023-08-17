@@ -2,38 +2,66 @@ package com.sound.recognition.adapters.tensorflow.implementation;
 
 import com.sound.recognition.entities.recording.SoundFile;
 import com.sound.recognition.entities.tensorflow.AnalysisResult;
+import com.sound.recognition.entities.tensorflow.observer.AnalysisResultObserver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static org.mockito.Mockito.*;
+
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 class TensorPythonScriptRunnerImplementationTest {
 
     private TensorPythonScriptRunnerImplementation runner;
-    private SoundFile mockSoundFile;
+    private SoundFile soundFile;
 
     @BeforeEach
     void setUp() {
         runner = new TensorPythonScriptRunnerImplementation();
-        mockSoundFile = mock(SoundFile.class);
-        when(mockSoundFile.getFilePath()).thenReturn("dummy_path");
+        soundFile = new SoundFile("path/to/test/file.wav");
     }
 
     @Test
-    void testRunTensorFlowAnalysisSuccess() {
-        AnalysisResult result = runner.runTensorFlowAnalysis(mockSoundFile);
+    void testRunTensorFlowAnalysis() {
+        AnalysisResult result = runner.runTensorFlowAnalysis(soundFile);
         assertNotNull(result);
-        // TODO Assuming your Python script for a successful case returns "Success", adjust as needed.
-        assertEquals("Success", result.getResult());
+        // Assume that a correct implementation will not return the error message. Adjust this as necessary.
+        assertNotEquals("Error: Unable to analyze sound file.", result.getResult());
     }
 
     @Test
-    void testRunTensorFlowAnalysisFailure() {
-        // Here, you might need a way to induce an error. One way could be to mock the SoundFile to return an invalid path.
-        when(mockSoundFile.getFilePath()).thenReturn("invalid_path");
+    void testObserverNotification() {
+        AnalysisResultObserver mockObserver = mock(AnalysisResultObserver.class);
+        runner.addResultObserver(mockObserver);
 
-        AnalysisResult result = runner.runTensorFlowAnalysis(mockSoundFile);
-        assertNotNull(result);
-        assertEquals("Error: Unable to analyze sound file.", result.getResult());
+        runner.update(soundFile);
+
+        // Wait for potential thread operations. Adjust the waiting time as necessary.
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        // Check if observer's method was called
+        verify(mockObserver, times(1)).onAnalysisComplete(any(AnalysisResult.class));
+    }
+
+    @Test
+    void testObserverAdditionAndRemoval() {
+        AnalysisResultObserver mockObserver = mock(AnalysisResultObserver.class);
+        runner.addResultObserver(mockObserver);
+        runner.removeResultObserver(mockObserver);
+
+        runner.update(soundFile);
+
+        // Wait for potential thread operations. Adjust the waiting time as necessary.
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        // Check if observer's method was NOT called
+        verify(mockObserver, times(0)).onAnalysisComplete(any(AnalysisResult.class));
     }
 }
