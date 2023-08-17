@@ -2,29 +2,40 @@ package com.sound.recognition.adapters.implementation;
 
 import com.sound.recognition.adapters.AudioRecorder;
 import com.sound.recognition.exceptions.SoundRecordingException;
+import com.sound.recognition.services.AudioSystemService;
+import com.sound.recognition.services.MixerService;
 
-import javax.sound.sampled.*;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.Mixer;
+import javax.sound.sampled.DataLine;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.TargetDataLine;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.AudioFileFormat;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 
 public class JavaSoundAPIRecorder implements AudioRecorder {
-
-    public static final String SOUND_DEVICE_NAME = "USB Audio Device";
     private static final long RECORDING_DURATION_MILLIS = 10_000;  // 10 seconds
+    private AudioSystemService audioSystemService;
+    private MixerService mixerService;
 
+    public JavaSoundAPIRecorder(AudioSystemService audioSystemService, MixerService mixerService) {
+        this.audioSystemService = audioSystemService;
+        this.mixerService = mixerService;
+    }
 
     @Override
     public void recordAndSave(String filePath) throws SoundRecordingException {
 
-        Mixer.Info desiredMixerInfo = getDesiredMixerInfo();
+        Mixer.Info desiredMixerInfo = audioSystemService.getMixerInfo();
         if (desiredMixerInfo == null) {
             throw new SoundRecordingException("Device not found");
         }
-
-        Mixer mixer = AudioSystem.getMixer(desiredMixerInfo);
-        AudioFormat chosenFormat = getSupportedFormat(mixer);
+        
+        AudioFormat chosenFormat = mixerService.getSupportedFormat();
         if (chosenFormat == null) {
             throw new SoundRecordingException("No supported formats found");
         }
@@ -32,7 +43,7 @@ public class JavaSoundAPIRecorder implements AudioRecorder {
         DataLine.Info newDataLineInfo = new DataLine.Info(TargetDataLine.class, chosenFormat);
 
         try (
-                TargetDataLine targetDataLine = (TargetDataLine) mixer.getLine(newDataLineInfo);
+                TargetDataLine targetDataLine = mixerService.getLine(newDataLineInfo);
                 ByteArrayOutputStream outStream = new ByteArrayOutputStream()
         ) {
             targetDataLine.open(chosenFormat);
@@ -50,42 +61,20 @@ public class JavaSoundAPIRecorder implements AudioRecorder {
 
             byte[] audioBytes = outStream.toByteArray();
             try (ByteArrayInputStream inStream = new ByteArrayInputStream(audioBytes);
-                 AudioInputStream audioStream = new AudioInputStream(inStream, chosenFormat, audioBytes.length / chosenFormat.getFrameSize())) {
+                 AudioInputStream audioStream = audioSystemService.getAudioInputStream(inStream, chosenFormat, audioBytes.length)) {
                 File audioFile = new File(filePath);
-                AudioSystem.write(audioStream, AudioFileFormat.Type.WAVE, audioFile);
+                audioSystemService.write(audioStream, AudioFileFormat.Type.WAVE, audioFile);
             }
 
             System.out.println("Recording stopped. File saved as " + filePath);
 
         } catch (LineUnavailableException e) {
             throw new SoundRecordingException("Line is unavailable.", e);
-        } catch (IOException e) {
+        } catch (
+                IOException e) {
             throw new SoundRecordingException("Error saving the audio file.", e);
         }
     }
 
 
-    private Mixer.Info getDesiredMixerInfo() {
-        Mixer.Info[] mixerInfos = AudioSystem.getMixerInfo();
-        for (Mixer.Info info : mixerInfos) {
-            if (info.getName().equals(SOUND_DEVICE_NAME)) {
-                return info;
-            }
-        }
-        return null;
-    }
-
-    private AudioFormat getSupportedFormat(Mixer mixer) {
-        DataLine.Info dataLineInfo = new DataLine.Info(TargetDataLine.class, null);
-        Line.Info[] targetLineInfos = mixer.getTargetLineInfo(dataLineInfo);
-        for (Line.Info targetLineInfo : targetLineInfos) {
-            if (targetLineInfo instanceof DataLine.Info) {
-                AudioFormat[] supportedFormats = ((DataLine.Info) targetLineInfo).getFormats();
-                if (supportedFormats.length > 0) {
-                    return supportedFormats[6];  // TODO Make sure you have more than 6 formats, else it'll throw an exception.
-                }
-            }
-        }
-        return null;
-    }
 }
