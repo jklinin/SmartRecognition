@@ -74,10 +74,9 @@ public class Main {
         Thread recordingThread = new Thread(() -> {
             try {
                 while (isRecording.get()) {
-                    String filePath = "aufnahme_" + fileCounter.getAndIncrement() + ".wav";
                     try {
                         container.getAudioRecorder().recordAndSave(recording_duration);
-                        System.out.println("Recording saved at: " + filePath);
+                        System.out.println("Recording saved");
                     } catch (SoundRecordingException e) {
                         e.printStackTrace();
                     }

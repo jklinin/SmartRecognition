@@ -32,7 +32,7 @@ public class TensorPythonScriptRunnerImplementation implements TensorPythonScrip
             in.close();
             return new AnalysisResult(resultFromPython);
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             // Handle exceptions appropriately. Maybe return a default AnalysisResult or throw a custom exception.
             return new AnalysisResult("Error: Unable to analyze sound file.");
