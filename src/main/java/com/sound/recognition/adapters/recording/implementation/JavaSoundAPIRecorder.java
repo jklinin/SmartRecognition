@@ -1,39 +1,35 @@
-package com.sound.recognition.adapters.implementation;
+package com.sound.recognition.adapters.recording.implementation;
 
-import com.sound.recognition.adapters.AudioRecorder;
+import com.sound.recognition.adapters.recording.AudioRecorder;
 import com.sound.recognition.exceptions.SoundRecordingException;
+import com.sound.recognition.exceptions.SoundSaveException;
+import com.sound.recognition.repository.recording.SoundFileRepository;
 import com.sound.recognition.services.AudioSystemService;
 import com.sound.recognition.services.MixerService;
 
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.Mixer;
-import javax.sound.sampled.DataLine;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.TargetDataLine;
-import javax.sound.sampled.LineUnavailableException;
-import javax.sound.sampled.AudioFileFormat;
-import java.io.ByteArrayInputStream;
+import javax.sound.sampled.*;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 
 public class JavaSoundAPIRecorder implements AudioRecorder {
+    private final SoundFileRepository soundFileRepository;
     private AudioSystemService audioSystemService;
     private MixerService mixerService;
 
-    public JavaSoundAPIRecorder(AudioSystemService audioSystemService, MixerService mixerService) {
+    public JavaSoundAPIRecorder(AudioSystemService audioSystemService, MixerService mixerService, SoundFileRepository soundFileRepository) {
         this.audioSystemService = audioSystemService;
         this.mixerService = mixerService;
+        this.soundFileRepository = soundFileRepository;
     }
 
     @Override
-    public void recordAndSave(String filePath, long recording_duration) throws SoundRecordingException {
+    public void recordAndSave(long recordingDuration) throws SoundRecordingException {
 
         Mixer.Info desiredMixerInfo = audioSystemService.getMixerInfo();
         if (desiredMixerInfo == null) {
             throw new SoundRecordingException("Device not found");
         }
-        
+
         AudioFormat chosenFormat = mixerService.getSupportedFormat();
         if (chosenFormat == null) {
             throw new SoundRecordingException("No supported formats found");
@@ -51,7 +47,7 @@ public class JavaSoundAPIRecorder implements AudioRecorder {
 
             byte[] buffer = new byte[chosenFormat.getSampleSizeInBits() * 1024];
             int bytesRead;
-            long endTimeMillis = System.currentTimeMillis() + recording_duration;
+            long endTimeMillis = System.currentTimeMillis() + recordingDuration;
 
             while (System.currentTimeMillis() < endTimeMillis) {
                 bytesRead = targetDataLine.read(buffer, 0, buffer.length);
@@ -59,19 +55,17 @@ public class JavaSoundAPIRecorder implements AudioRecorder {
             }
 
             byte[] audioBytes = outStream.toByteArray();
-            try (ByteArrayInputStream inStream = new ByteArrayInputStream(audioBytes);
-                 AudioInputStream audioStream = audioSystemService.getAudioInputStream(inStream, chosenFormat, audioBytes.length)) {
-                File audioFile = new File(filePath);
-                audioSystemService.write(audioStream, AudioFileFormat.Type.WAVE, audioFile);
-            }
 
-            System.out.println("Recording stopped. File saved as " + filePath);
+            soundFileRepository.save(audioBytes);
+
+            System.out.println("Recording stopped. File saved.");
 
         } catch (LineUnavailableException e) {
             throw new SoundRecordingException("Line is unavailable.", e);
-        } catch (
-                IOException e) {
+        } catch (IOException e) {
             throw new SoundRecordingException("Error saving the audio file.", e);
+        } catch (SoundSaveException e) {
+            throw new SoundRecordingException("Can't save sound file", e);
         }
     }
 

@@ -34,6 +34,8 @@ public class Main {
 
     public static void main(String[] args) {
         ServiceContainer container = new ServiceContainer();
+        container.getSoundFileRepository().addObserver(container.getTensorPythonScriptRunner());
+
         AtomicInteger fileCounter = new AtomicInteger(1);
         AtomicBoolean isRecording = new AtomicBoolean(true);
 
@@ -74,7 +76,7 @@ public class Main {
                 while (isRecording.get()) {
                     String filePath = "aufnahme_" + fileCounter.getAndIncrement() + ".wav";
                     try {
-                        container.getAudioRecorder().recordAndSave(filePath, recording_duration);
+                        container.getAudioRecorder().recordAndSave(recording_duration);
                         System.out.println("Recording saved at: " + filePath);
                     } catch (SoundRecordingException e) {
                         e.printStackTrace();
@@ -104,6 +106,7 @@ public class Main {
                 System.out.println("Invalid command. Type 'stop' to end recording.");
             }
         }
+        container.getSoundFileRepository().removeObserver(container.getTensorPythonScriptRunner());
 
         System.out.println("Recording stopped.");
     }

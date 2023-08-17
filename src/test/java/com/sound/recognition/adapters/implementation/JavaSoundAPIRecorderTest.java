@@ -1,6 +1,8 @@
 package com.sound.recognition.adapters.implementation;
 
+import com.sound.recognition.adapters.recording.implementation.JavaSoundAPIRecorder;
 import com.sound.recognition.exceptions.SoundRecordingException;
+import com.sound.recognition.repository.recording.SoundFileRepository;
 import com.sound.recognition.services.AudioSystemService;
 import com.sound.recognition.services.MixerService;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,19 +19,21 @@ class JavaSoundAPIRecorderTest {
     private JavaSoundAPIRecorder recorder;
     private AudioSystemService audioSystemMock;
     private MixerService mixerMock;
+    private SoundFileRepository soundRespositotyMock;
 
     @BeforeEach
     public void setUp() {
         audioSystemMock = mock(AudioSystemService.class);
         mixerMock = mock(MixerService.class);
-        recorder = new JavaSoundAPIRecorder(audioSystemMock, mixerMock);
+        soundRespositotyMock = mock(SoundFileRepository.class);
+        recorder = new JavaSoundAPIRecorder(audioSystemMock, mixerMock, soundRespositotyMock);
     }
 
     @Test
     void testRecordAndSave_deviceNotFound() {
         when(audioSystemMock.getMixerInfo()).thenReturn(null);
 
-        assertThrows(SoundRecordingException.class, () -> recorder.recordAndSave("path/to/save", RECORDING_DURATION));
+        assertThrows(SoundRecordingException.class, () -> recorder.recordAndSave(RECORDING_DURATION));
     }
 
     @Test
@@ -37,7 +41,7 @@ class JavaSoundAPIRecorderTest {
         when(audioSystemMock.getMixerInfo()).thenReturn(mock(Mixer.Info.class));
         when(mixerMock.getSupportedFormat()).thenReturn(null);
 
-        assertThrows(SoundRecordingException.class, () -> recorder.recordAndSave("path/to/save", RECORDING_DURATION));
+        assertThrows(SoundRecordingException.class, () -> recorder.recordAndSave(RECORDING_DURATION));
     }
 
     @Test
@@ -45,14 +49,14 @@ class JavaSoundAPIRecorderTest {
         setupMocksForSuccessfulRecording();
         when(mixerMock.getLine(any())).thenThrow(new LineUnavailableException());
 
-        assertThrows(SoundRecordingException.class, () -> recorder.recordAndSave("path/to/save", RECORDING_DURATION));
+        assertThrows(SoundRecordingException.class, () -> recorder.recordAndSave(RECORDING_DURATION));
     }
 
     @Test
     void testRecordAndSave_successfulRecording() throws Exception {
         setupMocksForSuccessfulRecording();
 
-        recorder.recordAndSave("path/to/save", RECORDING_DURATION);
+        recorder.recordAndSave(RECORDING_DURATION);
 
         // Verify that certain methods on your mocks were called, for example:
         verify(mixerMock, times(1)).getSupportedFormat();

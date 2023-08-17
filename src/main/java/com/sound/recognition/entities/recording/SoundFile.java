@@ -1,9 +1,9 @@
-package com.sound.recognition.entities;
+package com.sound.recognition.entities.recording;
 
-public class AudioRecording {
+public class SoundFile {
     private final String filePath;
 
-    public AudioRecording(String filePath) {
+    public SoundFile(String filePath) {
         this.filePath = filePath;
     }
 
